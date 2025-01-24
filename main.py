@@ -28,14 +28,15 @@ try:
 
     # instability 그룹 비교
     st.header("Instability 그룹 간 비교")
-    if "instability" in df.columns:
+    instability_column = "Instability \n(무:0,유:1)"
+    if instability_column in df.columns:
         # instability가 1인 그룹과 0인 그룹 분리
-        group_1 = df[df["instability"] == 1]
-        group_0 = df[df["instability"] == 0]
+        group_1 = df[df[instability_column] == 1]
+        group_0 = df[df[instability_column] == 0]
 
         # 사용자로부터 비교할 수치형 열 선택
         numeric_columns = df.select_dtypes(include=["int64", "float64"]).columns.tolist()
-        numeric_columns.remove("instability")  # instability는 제외
+        numeric_columns.remove(instability_column)  # instability 열 제외
         selected_column = st.selectbox("비교할 수치형 열을 선택하세요:", numeric_columns)
 
         # 결측값 제외 후 그룹화
@@ -73,7 +74,7 @@ try:
         else:
             st.warning("두 그룹 간에 통계적으로 유의미한 차이가 없습니다.")
     else:
-        st.error("데이터에 'instability' 열이 없습니다.")
+        st.error(f"'{instability_column}' 열이 없습니다.")
 except FileNotFoundError:
     st.error(f"CSV 파일 '{file_path}'을(를) 찾을 수 없습니다. 경로를 확인하세요.")
 except Exception as e:
