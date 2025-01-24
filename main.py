@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from scipy.stats import ttest_ind
 
 # Streamlit 앱 제목
 st.title("CSV 데이터 분석 및 시각화")
@@ -43,36 +45,33 @@ try:
         group_1_clean = group_1[selected_column].dropna()
         group_0_clean = group_0[selected_column].dropna()
 
-        # 두 그룹의 평균 차이 계산
-        mean_1 = group_1_clean.mean()
-        mean_0 = group_0_clean.mean()
-        var_1 = group_1_clean.var(ddof=1)
-        var_0 = group_0_clean.var(ddof=1)
-        n1 = len(group_1_clean)
-        n0 = len(group_0_clean)
-
-        # t-값 계산 (수동 t-test)
-        t_stat = (mean_1 - mean_0) / np.sqrt((var_1 / n1) + (var_0 / n0))
-        df_denom = ((var_1 / n1) + (var_0 / n0)) ** 2 / (
-            ((var_1 / n1) ** 2 / (n1 - 1)) + ((var_0 / n0) ** 2 / (n0 - 1))
-        )
-        p_value = 2 * (1 - abs(t_stat))  # 대략적인 p-value 계산 (정확도를 높이려면 보정 가능)
+        # t-test 실행
+        t_stat, p_value = ttest_ind(group_1_clean, group_0_clean, equal_var=False)
 
         st.write(f"### {selected_column} 열의 그룹별 평균")
-        st.write(f"- Instability 1 (불안정 그룹): {mean_1:.2f}")
-        st.write(f"- Instability 0 (안정 그룹): {mean_0:.2f}")
+        st.write(f"- Instability 1 (불안정 그룹): {group_1_clean.mean():.2f}")
+        st.write(f"- Instability 0 (안정 그룹): {group_0_clean.mean():.2f}")
         st.write(f"t-통계량: {t_stat:.2f}, p-값: {p_value:.4f}")
 
-        # 유의미한 차이가 있을 경우
+        # 그래프 출력
+        st.header("Boxplot으로 그룹 간 비교")
+        fig, ax = plt.subplots(figsize=(8, 6))
+        sns.boxplot(data=df, x=instability_column, y=selected_column, ax=ax)
+        sns.stripplot(data=df, x=instability_column, y=selected_column, color='black', alpha=0.5, jitter=True, ax=ax)
+        ax.set_title(f"{selected_column} 값의 Instability 그룹 간 비교")
+        ax.set_xlabel("Instability (0: 안정, 1: 불안정)")
+        ax.set_ylabel(selected_column)
+
+        # p-value가 유의미한 경우 그래프에 텍스트 추가
         if p_value < 0.05:
             st.success("두 그룹 간에 통계적으로 유의미한 차이가 있습니다.")
-            # 막대 그래프 출력
-            st.bar_chart(pd.DataFrame({
-                "Group": ["Instability 1", "Instability 0"],
-                "Mean": [mean_1, mean_0]
-            }).set_index("Group"))
+            ax.text(0.5, max(df[selected_column]), f"p-value = {p_value:.4f}", 
+                    horizontalalignment='center', color='red', fontsize=12)
         else:
             st.warning("두 그룹 간에 통계적으로 유의미한 차이가 없습니다.")
+
+        # 그래프 표시
+        st.pyplot(fig)
     else:
         st.error(f"'{instability_column}' 열이 없습니다.")
 except FileNotFoundError:
