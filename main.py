@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scipy.stats import ttest_ind, chi2_contingency, fisher_exact
+from scipy.stats import ttest_ind, chi2_contingency
 
 # Streamlit 앱 제목
 st.title("CSV 데이터 분석 및 시각화")
@@ -14,6 +14,11 @@ try:
     # CSV 파일 읽기
     df = pd.read_csv(file_path)
     
+    # 중복된 열 이름 처리
+    if df.columns.duplicated().any():
+        st.warning("중복된 열 이름이 감지되었습니다. 고유한 이름으로 자동 수정합니다.")
+        df.columns = pd.io.parsers.ParserBase({'names': df.columns})._maybe_dedup_names(df.columns)
+
     # 괄호로 처리된 글자 제거 (컬럼 이름 정리)
     df.columns = [col.split("(")[0].strip() for col in df.columns]
 
@@ -65,39 +70,4 @@ try:
             if p_value < 0.05:
                 st.success("두 그룹 간에 통계적으로 유의미한 차이가 있습니다.")
                 ax.text(0.5, max(df_clean[selected_column]), f"p-value = {p_value:.4f}",
-                        horizontalalignment="center", color="red", fontsize=12)
-            else:
-                st.warning("두 그룹 간에 통계적으로 유의미한 차이가 없습니다.")
-            st.pyplot(fig)
-        else:
-            # 범주형 데이터: 카이제곱 검정 또는 Fisher의 정확 검정
-            contingency_table = pd.crosstab(df_clean[selected_column], df_clean[instability_column])
-            st.write("### 교차표")
-            st.write(contingency_table)
-
-            # 카이제곱 검정
-            chi2, p_value, _, _ = chi2_contingency(contingency_table)
-
-            st.write(f"카이제곱 통계량: {chi2:.2f}, p-값: {p_value:.4f}")
-
-            # 막대 그래프
-            fig, ax = plt.subplots(figsize=(8, 6))
-            contingency_table.plot(kind="bar", stacked=True, ax=ax, color=["blue", "orange"])
-            ax.set_title(f"{selected_column} 값의 Instability 그룹 간 비교")
-            ax.set_xlabel(selected_column)
-            ax.set_ylabel("빈도수")
-            ax.legend(title="Instability", labels=["안정 (0)", "불안정 (1)"])
-
-            if p_value < 0.05:
-                st.success("두 그룹 간에 통계적으로 유의미한 차이가 있습니다.")
-                ax.text(0.5, contingency_table.values.max() + 1, f"p-value = {p_value:.4f}",
-                        horizontalalignment="center", color="red", fontsize=12)
-            else:
-                st.warning("두 그룹 간에 통계적으로 유의미한 차이가 없습니다.")
-            st.pyplot(fig)
-    else:
-        st.error(f"'{instability_column}' 열이 없습니다.")
-except FileNotFoundError:
-    st.error(f"CSV 파일 '{file_path}'을(를) 찾을 수 없습니다. 경로를 확인하세요.")
-except Exception as e:
-    st.error(f"오류가 발생했습니다: {e}")
+                        horizontalalignment="center", color
