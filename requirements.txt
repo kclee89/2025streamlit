@@ -2,3 +2,4 @@ matplotlib
 koreanize_matplotlib
 plotly
 scipy
+seaborn
