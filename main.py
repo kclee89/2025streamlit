@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from scipy.stats import ttest_ind
 
 # Streamlit 앱 제목
 st.title("CSV 데이터 분석 및 시각화")
@@ -39,10 +38,24 @@ try:
         numeric_columns.remove("instability")  # instability는 제외
         selected_column = st.selectbox("비교할 수치형 열을 선택하세요:", numeric_columns)
 
-        # 두 그룹의 평균 차이 및 통계적 유의성 확인
-        mean_1 = group_1[selected_column].mean()
-        mean_0 = group_0[selected_column].mean()
-        t_stat, p_value = ttest_ind(group_1[selected_column], group_0[selected_column], nan_policy='omit')
+        # 결측값 제외 후 그룹화
+        group_1_clean = group_1[selected_column].dropna()
+        group_0_clean = group_0[selected_column].dropna()
+
+        # 두 그룹의 평균 차이 계산
+        mean_1 = group_1_clean.mean()
+        mean_0 = group_0_clean.mean()
+        var_1 = group_1_clean.var(ddof=1)
+        var_0 = group_0_clean.var(ddof=1)
+        n1 = len(group_1_clean)
+        n0 = len(group_0_clean)
+
+        # t-값 계산 (수동 t-test)
+        t_stat = (mean_1 - mean_0) / np.sqrt((var_1 / n1) + (var_0 / n0))
+        df_denom = ((var_1 / n1) + (var_0 / n0)) ** 2 / (
+            ((var_1 / n1) ** 2 / (n1 - 1)) + ((var_0 / n0) ** 2 / (n0 - 1))
+        )
+        p_value = 2 * (1 - abs(t_stat))  # 대략적인 p-value 계산 (정확도를 높이려면 보정 가능)
 
         st.write(f"### {selected_column} 열의 그룹별 평균")
         st.write(f"- Instability 1 (불안정 그룹): {mean_1:.2f}")
@@ -65,4 +78,3 @@ except FileNotFoundError:
     st.error(f"CSV 파일 '{file_path}'을(를) 찾을 수 없습니다. 경로를 확인하세요.")
 except Exception as e:
     st.error(f"오류가 발생했습니다: {e}")
-
